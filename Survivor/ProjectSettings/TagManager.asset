@@ -1,0 +1,63 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!78 &1
+TagManager:
+  serializedVersion: 2
+  tags:
+  - zombi
+  - mermi
+  - kalp
+  - oyuncu
+  - oyunkontrol
+  - zombiharita
+  - haritaCam
+  - KolayButon
+  - OrtaButon
+  - ZorButon
+  - gemiTag
+  - gemiKontTag
+  - denizTag
+  - "bo\u011FulmaKontrolTag"
+  - odunTag
+  - odunKontrolTag
+  - "\u0130\u015FaretAleviTag"
+  - "i\u015FaretAleviKontrolTag"
+  - "i\u015FaretAleviniYakTag"
+  - zombiOdunTag
+  layers:
+  - Default
+  - TransparentFX
+  - Ignore Raycast
+  - 
+  - Water
+  - UI
+  - 
+  - 
+  - oyuncu_harita
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  m_SortingLayers:
+  - name: Default
+    uniqueID: 0
+    locked: 0

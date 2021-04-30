@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>pxls.space</title>
+    <meta name="keywords" content="pxls, pixels, place, art">
+    <meta name="description" content="Place pixels with people to create art">
+    <meta name="google-play-app" content="app-id=space.pxls.android">
+    <style type="text/css">
+        /** These MUST be here because the YUI compressor breaks calc() and is abandoned */
+        body.panel-open.panel-right #ui .right {
+            right: calc(30vw + 10px);
+        }
+
+        body.panel-open.panel-left #ui .left {
+            left: calc(30vw + 10px);
+        }
+    </style>
+    <link rel="stylesheet" href="jquery.modal.min.css">
+    <link rel="stylesheet" href="fontawesome-all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="SLIDEIN.css">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/interact.js/1.2.8/interact.min.js"></script>
+    <script src="moment.min.js"></script>
+    <script src="crel.min.js"></script>
+    <script src="anchorme.min.js"></script>
+    <script src="emoji-button.min.js"></script>
+    <script src="twemoji.min.js"></script>
+    <script src="emojiDB.min.js"></script>
+    <script src="jquery.modal.min.js"></script>
+    <script src="SLIDEIN.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"/>
+    <meta name="theme-color">
+
+    <script>
+    (function (i, s, o, g, r, a, m) {
+        i['GoogleAnalyticsObject'] = r;
+        i[r] = i[r] || function () {
+                (i[r].q = i[r].q || []).push(arguments)
+            }, i[r].l = 1 * new Date();
+        a = s.createElement(o),
+            m = s.getElementsByTagName(o)[0];
+        a.async = 1;
+        a.src = g;
+        m.parentNode.insertBefore(a, m)
+    })(window, document, 'script', 'https://www.google-analytics.com/analytics.js', 'ga');
+
+    ga('create', 'UA-96985737-1', 'auto');
+    ga('send', 'pageview');
+</script>
+
+</head>
+<body class="show-placeable-bubble">
+<header class="transparent" style="margin-top: 5px;">
+    <div class="left">
+        <div class="panel-trigger" data-panel="info">
+            <i class="fas fa-info-circle"></i>
+        </div>
+        <div class="panel-trigger" data-panel="faq">
+            <i class="fas fa-question-circle"></i>
+        </div>
+        <div class="panel-trigger" data-panel="notifications">
+            <i class="fas fa-bell" id="notifications-icon"></i>
+            <i class="fas fa-circle ping-counter" id="notifications-ping-counter"></i>
+        </div>
+    </div>
+    <div class="mid"></div>
+    <div class="right">
+        <div class="panel-trigger" data-panel="settings">
+            <i class="fas fa-cog"></i>
+        </div>
+        <div class="panel-trigger" data-panel="chat">
+            <i class="fas fa-comment-alt" id="message-icon"></i>
+            <i class="fas fa-circle ping-counter" id="ping-counter"></i>
+        </div>
+    </div>
+</header>
+
+<div id="reconnecting">Lost connection to server, reconnecting...</div>
+
+<div id="board-container" style="touch-action: none">
+    <div id="grid"></div>
+    <div id="board-zoomer">
+        <div id="board-mover">
+            <canvas id="heatmap" class="pixelate noselect"></canvas>
+            <canvas id="virginmap" class="pixelate noselect"></canvas>
+            <canvas id="board" class="pixelate noselect" width="100" height="100"></canvas>
+        </div>
+    </div>
+</div>
+
+<div id="ui">
+    <div id="ui-top">
+        <div id="loading-bubble" class="bubble">
+            <div class="loading-bubble-item" data-process="heatmap">Loading Heatmap (press <kbd>H</kbd> to cancel)</div>
+            <div class="loading-bubble-item" data-process="virginmap">Loading Virginmap (press <kbd>X</kbd> to cancel)</div>
+        </div>
+        <div id="main-bubble" class="bubble">
+            <div id="user-info">
+                <!-- TODO: link to position on stats page -->
+                <!-- TODO: later on, link to my.pxls.space profile -->
+                <span id="username"></span>
+                <a href="/logout" class="logout"><i class="fas fa-sign-out-alt" id="logout-icon"></i></a>
+                <br>
+            </div>
+            <span id="online-count">Waiting for online count...</span>
+            <br><br>
+            <div id="coords-info">
+                <a class="coords"></a>
+                <img src="lock.png" class="icon-lock" style="display: none;">
+            </div>
+            <div id="placement-info">
+                <span>Pixels available: </span><span id="placeable-count">N/A</span>
+                <br>
+                <span id="cooldown-timer"></span>
+            </div>
+        </div>
+    </div>
+
+    <div id="ui-bottom">
+        <div id="undo"><span>Undo</span></div>
+        <div id="login-overlay" class="palette-overlay">
+            You are not signed in.&nbsp;<a href="#">Sign in with...</a>
+        </div>
+        <div id="user-message" class="palette-overlay"></div>
+        <div id="palette">
+            <div id="cd-timer-overlay" class="palette-overlay"></div>
+        </div>
+    </div>
+</div>
+
+
+<div id="lookup"></div>
+<div id="loading"><span>Loading...</span></div>
+<div id="cursor">
+    <div id="placeableCount-cursor">0/0</div>
+</div>
+<div id="reticule"></div>
+<div id="prompt" class="message"></div>
+<div id="signup" class="message">
+    <h1>Sign up</h1>
+    <h4>Pick a username</h4>
+
+    <label>Username: <input type="text" maxlength="32"></label>
+    <div class="error" id="error"></div>
+    <div class="buttons">
+        <span class="button" id="signup-button">Sign up</span>
+    </div>
+</div>
+
+
+<div class="g-recaptcha"
+     data-callback="recaptchaCallback"
+     data-size="invisible"></div>
+
+<aside class="panel left" data-panel="info">
+    <header class="panel-header darker">
+        <div class="left"></div>
+        <div class="mid">
+            <h2><i class="fas fa-info-circle fa-is-left fa-1_5x"></i>Info</h2>
+        </div>
+        <div class="right">
+            <i class="fas fa-times panel-closer text-red"></i>
+        </div>
+    </header>
+    <div class="panel-body">
+        <article>
+	<header class="slim darker">
+		<h2>Welcome!</h2>
+	</header>
+	<div class="pad-wrapper">
+		<p>Welcome to pxls.space! Pxls is a multiplayer online collaborative canvas that allows you to create anything you can imagine, one pixel at a time. Join hundreds of other players in the Pxls community and create amazing works of art together as a team, or solo.</p>
+		<p>The best place to reach staff and fellow community is in the discord! There is a link below in the "links" section.</p>
+		<p>Check out our social media pages, and please take the time to read the rules below. Have fun creating (or changing) art!</p>
+	</div>
+</article>
+<article id="canvas-rules">
+	<header class="slim darker">
+		<h2 class="text-red">Canvas Rules</h2>
+	</header>
+	<div class="pad-wrapper" id="rules-content">
+		<p>We pride ourselves on trying to keep an open canvas for all free from outside interference on our end, and especially censorship. However, for the good of the community and on accounts of our own beliefs, please acknowledge and obey the following guidelines:</p>
+		<ol>
+			<li>No hateful imagery or derogatory speech. This includes but is not limited to words such as <i>faggot</i>, <i>nigger</i>, etc; as well as the Swastika, Hammer and Sickle, and any symbols of terrorism.</li>
+			<li>No NSFW or NSFL content.
+				<ul>
+					<li>No nudity or otherwise sexually explicit content
+						<ul>
+							<li>No female-presenting nipples/bare breasts, genitalia, sexual fluids</li>
+						</ul>
+					</li>
+					<li>No sexual imagery/erotica</li>
+					<li>No excessive blood or otherwise obscene/shocking content</li>
+				</ul>
+			</li>
+			<li>No more than <b>one</b> account per user, no exceptions. Multiple account users will be banned from creating art on the canvas.</li>
+			<li>No auto-placement tools of any kind, you must place the pixels manually.</li>
+			<li>Do not abuse site functionality, such as reports or lookups. (e.g. automated reporting/lookups, etc.)</li>
+			<li>Any automated aggregation of data from user lookups is not allowed, and will result in a ban.</li>
+			<li>Staff have final say in any rule disputes
+				<ul>
+					<li>If you feel a moderator has acted inappropriately, please report it to an administrator.</li>
+				</ul>
+			</li>
+		</ol>
+		<p>If you believe you have been falsely banned you may contact a moderator or administrator.</p>
+	</div>
+</article>
+<article id="chat-rules">
+	<header class="slim darker">
+		<h2 class="text-red">Chat Rules</h2>
+	</header>
+	<div class="pad-wrapper">
+		<ol>
+			<li>Keep chat civil. No harassment or homophobic/transphobic language.</li>
+			<li>No hate speech. This includes emoji/symbols/ASCII art.
+				<ul>
+					<li>Normal swearing/etc is allowed</li>
+				</ul>
+			</li>
+			<li>No spamming
+				<ul>
+					<li>This includes excessive ASCII art/emojis/symbols/whitespace/obfuscating language</li>
+				</ul>
+			</li>
+			<li>No "copy pasta"s</li>
+			<li>No links to sites that actively break the canvas or chat rules (e.g. porn sites)</li>
+			<li>No symbology which break the canvas or chat rules (e.g. NSFW ASCII art)</li>
+			<li>Staff have final say in any rule disputes
+				<ul>
+					<li>If you feel a moderator has acted inappropriately, please report it to an administrator.</li>
+				</ul>
+			</li>
+		</ol>
+	</div>
+</article>
+<article>
+	<header class="slim darker">
+		<h2>Links</h2>
+	</header>
+	<div class="pad-wrapper">
+		<a href="https://pxls.space/discord" target="_blank">Discord (main hub)</a>
+		<a href="https://reddit.com/r/pxlsspace" target="_blank">Subreddit</a>
+		<a href="https://twitter.com/pxls_space" target="_blank">Twitter</a>
+		<a href="https://facebook.com/pxls.space/" target="_blank">Facebook</a>
+		<a href="https://pxls-space.tumblr.com/" target="_blank">Tumblr</a>
+		<a href="https://vk.com/pxls.official" target="_blank">VK</a>
+		<a href="https://play.google.com/store/apps/details?id=space.pxls.android" target="_blank">Android app</a>
+		<a href="https://github.com/xSke/Pxls" target="_blank">GitHub</a>
+		<a href="https://github.com/xSke/PxlsApp" target="_blank">GitHub (App)</a>
+		<a href="http://www.piskelapp.com/p/create" target="_blank">Single-player mode</a>
+		<br>
+		<a href="https://pxls.space/stats" target="_blank">Statistics</a>
+		<a href="https://pxlsfiddle.com/" target="_blank" title="Template generator, archives, timelapses, and other utilities">PxlsFiddle (templates, archives, etc.)</a>
+	</div>
+</article>
+<article>
+	<header class="slim darker">
+		<h2>Donate</h2>
+	</header>
+	<div class="pad-wrapper">
+		<p>We have monthly costs which we have to pay to keep this project alive, this is something we really do not want to pay additionally to the spare time we invest in this project. Donating is optional and does not come with any advantages over other players on canvas.</p>
+		<form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top" style="text-align: center;">
+		<input type="hidden" name="cmd" value="_s-xclick">
+		<input type="hidden" name="hosted_button_id" value="6BEA2MQSCX4ZA">
+		<input type="hidden" name="lc" value="en_US">
+		<input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online!">
+		<img alt="" border="0" src="https://www.paypalobjects.com/en_US/i/scr/pixel.gif" width="1" height="1">
+		</form>
+	</div>
+</article>
+
+
+    </div>
+</aside>
+
+<aside id="chat" data-panel="chat" class="panel right">
+    <header class="panel-header">
+        <div class="left"><i class="fas fa-times text-red panel-closer"></i></div>
+        <h2><i class="fas fa-comment-alt fa-is-left fa-1_5x"></i>Chat <span class="mobile-only" id="txtMobileChatCooldown"></span></h2>
+        <div class="right">
+            <i class="fas fa-at" id="btnPings" title="Pings"></i>
+            <i class="fas fa-cogs" id="btnChatSettings" title="Settings"></i>
+        </div>
+    </header>
+    <div class="panel-body">
+        <div class="chat-wrapper">
+            <ul id="chat-body" class="chat-body"></ul>
+            <div class="chat-hints">
+                <span id="chat-hint"></span>
+            </div>
+            <div class="chat-controls">
+                <div class="chat-ratelimit-overlay"><span id="chat-ratelimit">3s</span></div>
+                <div id="jump-to-bottom" style="display: none;">
+                    <i class="fas fa-arrow-down fa-is-right" style="float: left; margin-top: 4px;"></i>
+                    <span>Jump To Bottom</span>
+                    <i class="fas fa-arrow-down fa-is-left" style="float: right; margin-top: 4px;"></i>
+                </div>
+                <div id="typeahead" style="display: none;">
+                    <p class="text-muted" data-dismiss="typeahead" style="cursor: pointer; padding-top: .25rem; padding-bottom: .25rem; margin: 0 0 .5rem 0rem; text-align: center; font-style: italic;">Tap here or press ESC to cancel</p>
+                    <ul></ul>
+                </div>
+                <i class="far fa-grin" id="emojiPanelTrigger"></i>
+                <label><textarea name="txtChatContent" id="txtChatContent" placeholder="Press ENTER to send..."></textarea></label>
+                <div class="bottom-banner" id="bottom-banner"></div>
+            </div>
+        </div>
+    </div>
+</aside>
+
+
+<aside id="settings" data-panel="settings" class="panel right">
+    <header class="panel-header">
+        <div class="left"><i class="fas fa-times panel-closer text-red"></i></div>
+        <div class="mid">
+            <h2><i class="fas fa-cogs fa-is-left fa-1_5x"></i>Settings</h2>
+        </div>
+        <div class="right"></div>
+    </header>
+    <div class="panel-body">
+        <article class="no-p-margin">
+            <header class="slim darker">
+                <h2>Keybinds</h2>
+            </header>
+            <div class="pad-wrapper">
+                <h3>General</h3>
+                <div class="indent-1">
+                    <p>Mouse/arrows/wasd to pan</p>
+                    <p>Scroll/pinch to zoom</p>
+                    <p><kbd>+</kbd>/<kbd>-</kbd> or <kbd>Q</kbd>/<kbd>E</kbd> to zoom</p>
+                    <p><kbd>Shift</kbd> + Click/Hold touch to lookup pixel</p>
+                    <p><kbd>G</kbd> to toggle grid</p>
+                    <p><kbd>I</kbd> to open info</p>
+                    <p><kbd>T</kbd> to open settings</p>
+                    <p><kbd>B</kbd> to open chat</p>
+                    <p><kbd>L</kbd> to toggle locking panning of the canvas</p>
+                    <p><kbd>P</kbd> to take a snapshot</p>
+                    <p><kbd>H</kbd> to toggle heatmap</p>
+                    <p><kbd>X</kbd> to toggle virginmap</p>
+                    <p><kbd>O</kbd> to clear heatmap and virginmap (if either is enabled)</p>
+                    <p><kbd>J</kbd>/<kbd>K</kbd> to cycle through palette colors</p>
+                    <p><kbd>C</kbd> to copy link of moused-over coordinates</p>
+                    <p><kbd>ESC</kbd> to deselect current pixel</p>
+                    <p><kbd>R</kbd> to center the board on the current template</p>
+                </div>
+                <h3>Template</h3>
+                <div class="indent-1">
+                    <p><kbd>Page Up</kbd> to increase opacity</p>
+                    <p><kbd>Page Down</kbd> to decrease opacity</p>
+                    <p><kbd>V</kbd> to toggle visibility</p>
+                </div>
+            </div>
+        </article>
+        <article>
+            <header class="slim darker">
+                <h2>General Settings</h2>
+            </header>
+            <div class="pad-wrapper">
+                <div class="settingToggles">
+                    <div class="lblwrap">
+                        <label>Theme:
+                            <select id="themeSelect">
+                                <option value="-1" selected>Default</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="d-block">
+                        <label><input id="audiotoggle" type="checkbox"/>Mute sound</label>
+                    </div>
+                    <div class="d-block">
+                        <label><input id="heatmaptoggle" type="checkbox"/>Turn on heatmap (toggle with <kbd>H</kbd>)</label>
+                    </div>
+                    <div class="d-block">
+                        <label><input id="virginmaptoggle" type="checkbox"/>Turn on virginmap (toggle with <kbd>X</kbd>)</label>
+                    </div>
+                    <div class="d-block">
+                        <button id="hvmapClear">Clear heatmap and virginmap</button> (hotkey: <kbd>O</kbd>)
+                    </div>
+                    <div class="d-block">
+                        <label><input id="gridtoggle" type="checkbox"/>Turn on grid (toggle with <kbd>G</kbd>)</label>
+                    </div>
+                    <div class="d-block"><label><input type="checkbox" id="lockCanvasToggle"> Lock the canvas (disallow canvas drag/zoom with mouse/fingers)</label></div>
+                    <div class="d-block">
+                        <label><input id="native-notification-toggle" type="checkbox"/>Enable pixel available notification</label>
+                    </div>
+                    <div class="d-block">
+                        <label><input id="stickyColorToggle" type="checkbox"/>Keep color selected</label>
+                    </div>
+                    <div class="d-block">
+                        <label><input id="monospaceToggle" type="checkbox"/>Toggle monospace font for lookups</label>
+                    </div>
+                    <div class="d-block">
+                        <label><input id="increasedZoomToggle" type="checkbox"/>Allow zoom values greater than 50x</label>
+                    </div>
+                    <div class="d-block">
+                        <label><input id="scrollSwitchToggle" type="checkbox"/>Enable scrolling on the palette to switch colors</label>
+                    </div>
+                    <div class="d-block">
+                        <label style="text-indent:1em"><input id="scrollDirectionToggle" type="checkbox"/>Invert scroll direction</label>
+                    </div>
+                    <div class="d-block">
+                        <label><input id="showReticuleToggle" type="checkbox"/>Show Reticule</label>
+                    </div>
+                    <div class="d-block">
+                        <label><input id="showCursorToggle" type="checkbox"/>Show Cursor</label>
+                    </div>
+                    <div class="d-block">
+                        <label><input id="cbEnableMiddleMouseSelect" type="checkbox"> Enable middle mouse button selecting color from board</label>
+                    </div>
+                    <div class="d-block">
+                        <label><input id="cbNumberedPalette" type="checkbox"> Add numbers to palette entries</label>
+                    </div>
+                    <div class="d-block">
+                        <label>Heatmap Background Opacity: <input type="range" min="0" max="1" step="0.01" id="heatmap-opacity"></label>
+                    </div>
+                    <div class="d-block">
+                        <label>Virginmap Background Opacity: <input type="range" min="0" max="1" step="0.01" id="virginmap-opacity"></label>
+                    </div>
+                    <div class="d-block">
+                        <label>
+                            Snapshot (hotkey: <kbd>P</kbd>) image format
+                            <select id="snapshotImageFormat">
+                                <option value="image/png" selected>PNG</option>
+                                <option value="image/jpeg">JPEG</option>
+                                <option value="image/webp">WEBP (Chrome only)</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div>
+                        Bubble position
+                        <div id="bubble-position">
+                            <label>
+                                <input type="radio" name="bubble-position" value="top left" />
+                                <div></div>
+                            </label>
+                            <label>
+                                <input type="radio" name="bubble-position" value="top right" />
+                                <div></div>
+                            </label>
+                            <label>
+                                <input type="radio" name="bubble-position" value="bottom left" />
+                                <div></div>
+                            </label>
+                            <label>
+                                <input type="radio" name="bubble-position" value="bottom right" />
+                                <div></div>
+                            </label>
+                        </div>
+                    </div>
+
+
+                </div>
+                <div>
+                    <p><label class="vertical-spacing"><input type="checkbox" id="color-brightness-toggle"> Enable Color Brightness</label></p>
+                    <p><label class="text-orange fake-indent"><i class="fas fa-exclamation-triangle"></i> Warning: Known to cause fuzziness in Chrome on some Mac/Linux installs</label></p>
+                    <p><label class="fake-indent">Color Brightness: <input type="range" min="0" max="1" step="0.01" value="1" id="color-brightness"></label></p>
+                </div>
+                <label id="chrome-canvas-offset-setting"><input id="chrome-canvas-offset-toggle" type="checkbox"/>Attempt to fix Canvas displacement bug in Chrome 78+</label>
+            </div>
+        </article>
+        <article>
+            <header class="slim darker">
+                <h2>Template</h2>
+            </header>
+            <div class="pad-wrapper">
+                <div>
+                    <label><input type="checkbox" id="template-use"> Use template</label>
+                </div>
+                <p>Hold down <kbd>Ctrl</kbd> (or <kbd>Option</kbd> on mac) to drag the template around</p>
+                <div class="longTextInputWrapper d-block">
+                    <label>Title:</label>
+                    <input type="text" id="template-title">
+                </div>
+                <div class="longTextInputWrapper d-block">
+                    <label>URL:</label>
+                    <input type="text" id="template-url">
+                    <span id="template-image-error-warning" class="text-red">There was an error getting the image</span>
+                </div>
+                <div>
+                    <label>Position: <input type="number" min="0" class="template-coords small-input" id="template-coords-x">, <input type="number" min="0" class="template-coords small-input" id="template-coords-y"></label>
+                </div>
+                <div>
+                    <label>Opacity: <input type="range" id="template-opacity" min="0" max="1" step="0.01"></label>
+                    <span id="template-opacity-percentage">100%</span>
+                </div>
+                <div>
+                    <label>Width: <input type="number" id="template-width" class="small-input" min="0"></label>
+                    <button id="template-width-reset">Reset</button>
+                </div>
+            </div>
+        </article>
+        <article>
+            <header class="slim darker">
+                <h2>Pixel Ready Alert Settings</h2>
+            </header>
+            <div class="pad-wrapper">
+                <p class="longTextInputWrapper"><label for="txtAlertLocation">Alert URL:</label><input type="text" placeholder="notify.wav" id="txtAlertLocation"></p>
+                <div class="ButtonBar">
+                    <button id="btnForceAudioUpdate" class="button">Update</button>
+                    <button id="btnAlertAudioTest" class="button">Test</button>
+                    <button id="btnAlertReset" class="button">Reset</button>
+                </div>
+                <div>
+                    <label for="rangeAlertVolume">Volume:</label>
+                    <input type="range" id="rangeAlertVolume" min=0 max=1 step=".01" value=1>
+                    <span id="lblAlertVolume"></span>
+                </div>
+                <label style="display: block;">Delay (Seconds): <input type="text" width="30px" value="0" id="alertDelay"></label>
+            </div>
+        </article>
+        <article>
+            <header class="slim darker">
+                <h2>Account Settings</h2>
+            </header>
+            <div class="pad-wrapper">
+                <p class="longTextInputWrapper"><label for="txtDiscordName">Public Discord Name:</label><input type="text" placeholder="pxlslover#1337" id="txtDiscordName"></p>
+                <div class="ButtonBar">
+                    <button id="btnDiscordNameSet" class="button">Set</button>
+                    <button id="btnDiscordNameRemove" class="button">Remove</button>
+                </div>
+            </div>
+        </article>
+    </div>
+</aside>
+
+<aside id="faq" data-panel="faq" class="panel half-width left">
+    <header class="panel-header">
+        <div class="left"></div>
+        <h2><i class="fas fa-question-circle fa-is-left fa-1_5x"></i>Help</h2>
+        <div class="right"><i class="fas fa-times text-red panel-closer"></i></div>
+    </header>
+    <div class="panel-body">
+        <article>
+    <header class="slim darker">
+        <h2>FAQ</h2>
+    </header>
+    <div class="pad-wrapper">
+        <dl>
+            <dt>Why is the cooldown as long as it is?</dt>
+            <dd>The time it takes to get a pixel is dynamic, and changes based on how many people are online. The cooldown time is longer when more users are online.</dd>
+            <dt>Why does it say 0/6 pixels?</dt>
+            <dd>This means that you are waiting for your next pixel. When you place a pixel, there is a cooldown for when you can place the next one. Over time, you can gain up to 6 "stacked" pixels to place at once.</dd>
+            <dt>Why does it take so long to "stack" pixels?</dt>
+            <dd>This is by design. It is better to place a pixel as soon as you get one. Pixel "stacking" is meant to give you a bump if you go AFK for a bit. It takes around 40 minutes to get a full 6/6 pixels, but it only takes around 3 minutes to place 6 pixels if you place them as soon as possible.</dd>
+            <dt>How do I appeal a ban?</dt>
+            <dd>Contact us on <a href="https://pxls.space/discord" target="_blank">Discord</a> or send an appeal to our <a href="https://pxls.space/appeal" target="_blank">Google form</a> after reading the rules in the site's info panel.</dd>
+            <dt>How do I make a template?</dt>
+            <dd>A template is an image link that is posted in the template textbox in the settings panel so you can place over it on the canvas. You may use a regular image link to your pixel art, but many people use the 3rd party tool <a href="https://pxlsfiddle.com" target="_blank">PxlsFiddle</a> to turn pixel art into a fancier link. If you need to make pixel art yourself, you can use <a href="https://www.piskelapp.com/p/create" target="_blank">Piskel</a> to create art to put into PxlsFiddle.</dd>
+            <dd>Community members have made tutorials for these tools:<span class="fake-indent d-block"><a href="https://drive.google.com/file/d/1t1gKl3uDRpTVYocNAzADwBhItbjr95Q8/view" target="_blank">Rena's <i>Pxls templates for dummies</i></a></span><span class="fake-indent d-block"><a class="d-block" href="https://streamable.com/0ursf" target="_blank">Netux's quick video on how to use PxlsFiddle</a></span></dd>
+            <dt>How do I move a template?</dt>
+            <dd>Hold <kbd>CTRL</kbd> (or <kbd>OPTION</kbd> on macOS) and click and drag to move it around. On mobile, you can tap and hold where you want to move the template and click "Move Template Here" in the pop-up.</dd>
+            <dt>Does the canvas reset? When?</dt>
+            <dd>Yes. The canvas resets when it is completely full. A reset date is not usually decided until the canvas is full, but the average canvas life-span is around 1 month. Updates are posted in our <a href="https://pxls.space/discord" target="_blank">Discord server</a> when a reset date is set.</dd>
+            <dt>Where can I see the past canvases?</dt>
+            <dd>The past canvases are featured on our <a href="https://pxls.space/discord" target="_blank">Discord server</a>, or the 3rd party website <a href="https://pxlsfiddle.com" target="_blank">PxlsFiddle</a>, which records timelapses and a lot of useful information on each canvas.</dd>
+            <dt>How do I see who placed a pixel?</dt>
+            <dd>By shift-clicking (or tap and hold on mobile) a pixel, you can see who placed a pixel, how many pixels they have placed, and when they placed it.</dd>
+            <dt>How do I report someone?</dt>
+            <dd>Shift-click (or tap and hold on mobile) on a pixel, and click the Report button.</dd>
+            <dt>How do I change the color of my name in the chat?</dt>
+            <dd>There is a "Username Color" option near the bottom of the settings panel.</dd>
+            <dt>What is a "virginmap"?</dt>
+            <dd>The virginmap shows which pixels have not yet been placed on (or “virgin” pixels).</dd>
+            <dt>How do I report bugs?</dt>
+            <dd>Submit bugs to the #dev-and-bugs channel in the <a href="https://pxls.space/discord" target="_blank">Discord server</a>. If you have found an exploit, please message one of the staff members privately (through DMs).</dd>
+            <dt>How do I get more info or contact staff?</dt>
+            <dd>Check the info panel (the icon on the top left) for more details and links, or join our <a href="https://pxls.space/discord" target="_blank">Discord server</a>, where a staff member will gladly respond.</dd>
+        </dl>
+    </div>
+</article>
+
+    </div>
+</aside>
+
+<aside id="notifications" data-panel="notifications" class="panel left">
+    <header class="panel-header">
+        <div class="left"></div>
+        <h2><i class="fas fa-bell fa-is-left fa-1_5x"></i>Notifications</h2>
+        <div class="right"><i class="fas fa-times text-red panel-closer"></i></div>
+    </header>
+    <div class="panel-body"></div>
+</aside>
+
+<script src="pxls.js"></script>
+
+</body>
+</html>
